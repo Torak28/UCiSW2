@@ -1,4 +1,4 @@
--- Vhdl test bench created from schematic D:\Dropbox\Studiowanie\VI semestr\UCiSW2\Ola_Jarek\s4.sch - Sat Mar 18 14:08:05 2017
+-- Vhdl test bench created from schematic D:\Dropbox\Studiowanie\VI semestr\UCiSW2\Ola_Jarek\s5.sch - Sat Mar 18 16:37:30 2017
 --
 -- Notes: 
 -- 1) This testbench template has been automatically generated using types
@@ -17,11 +17,11 @@ USE ieee.std_logic_1164.ALL;
 USE ieee.numeric_std.ALL;
 LIBRARY UNISIM;
 USE UNISIM.Vcomponents.ALL;
-ENTITY s4_s4_sch_tb IS
-END s4_s4_sch_tb;
-ARCHITECTURE behavioral OF s4_s4_sch_tb IS 
+ENTITY s5_s5_sch_tb IS
+END s5_s5_sch_tb;
+ARCHITECTURE behavioral OF s5_s5_sch_tb IS 
 
-   COMPONENT s4
+   COMPONENT s5
    PORT( ClockIN	:	IN	STD_LOGIC; 
 				Clr	:	IN	STD_LOGIC; 
          ClockOUT	:	OUT	STD_LOGIC);
@@ -39,7 +39,7 @@ ARCHITECTURE behavioral OF s4_s4_sch_tb IS
 
 BEGIN
 
-   UUT: s4 PORT MAP(
+   UUT: s5 PORT MAP(
 		ClockIN => ClockIN, 
 		Clr => Clr, 
 		ClockOUT => ClockOUT
