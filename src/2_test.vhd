@@ -1,4 +1,4 @@
--- Vhdl test bench created from schematic C:\XilinxPrj\Ola_Jarek\s1.sch - Wed Mar 08 10:55:29 2017
+-- Vhdl test bench created from schematic D:\Dropbox\Studiowanie\VI semestr\UCiSW2\Ola_Jarek\s4.sch - Sat Mar 18 14:08:05 2017
 --
 -- Notes: 
 -- 1) This testbench template has been automatically generated using types
@@ -17,40 +17,44 @@ USE ieee.std_logic_1164.ALL;
 USE ieee.numeric_std.ALL;
 LIBRARY UNISIM;
 USE UNISIM.Vcomponents.ALL;
-ENTITY s1_s1_sch_tb IS
-END s1_s1_sch_tb;
-ARCHITECTURE behavioral OF s1_s1_sch_tb IS 
+ENTITY s4_s4_sch_tb IS
+END s4_s4_sch_tb;
+ARCHITECTURE behavioral OF s4_s4_sch_tb IS 
 
-   COMPONENT s1
-   PORT(  Clr	:	IN	STD_LOGIC; 
-          Clock	:	IN	STD_LOGIC; 
-          Wyjscie	:	OUT	STD_LOGIC_VECTOR (5 DOWNTO 0));
+   COMPONENT s4
+   PORT( ClockIN	:	IN	STD_LOGIC; 
+				Clr	:	IN	STD_LOGIC; 
+         ClockOUT	:	OUT	STD_LOGIC);
    END COMPONENT;
 
+	--Wejscie
+   SIGNAL ClockIN	:	STD_LOGIC;
    SIGNAL Clr	:	STD_LOGIC;
-   SIGNAL Clock	:	STD_LOGIC;
-   SIGNAL Wyjscie	:	STD_LOGIC_VECTOR (5 DOWNTO 0);
 	
-	-- Stały czas zegara
+	--Wyjscie
+   SIGNAL ClockOUT	:	STD_LOGIC;
+	
+	--Okres 50MHz
 	constant Clock_period : time := 20ns;
 
 BEGIN
 
-   UUT: s1 PORT MAP(
+   UUT: s4 PORT MAP(
+		ClockIN => ClockIN, 
 		Clr => Clr, 
-		Clock => Clock, 
-		Wyjscie => Wyjscie
+		ClockOUT => ClockOUT
    );
 
-	--Clock 50MHz
-	Clock_process: process
+	-- 50MHz
+	Clock_process :process
 	begin
-		Clock <= '0';
+		ClockIN <= '0';
 		wait for Clock_period/2;
-		Clock <= '1';
+		ClockIN <= '1';
 		wait for Clock_period/2;
 	end process;
-	
-	
+	 
+	-- Symulacja
 	Clr <= '0';
+
 END;
