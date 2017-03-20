@@ -1,60 +1,87 @@
--- Vhdl test bench created from schematic D:\Dropbox\Studiowanie\VI semestr\UCiSW2\Ola_Jarek\s6.sch - Sat Mar 18 17:28:29 2017
+----------------------------------------------------------------------------------
+-- Company: 
+-- Engineer: 
+-- 
+-- Create Date:    17:15:51 03/20/2017 
+-- Design Name: 
+-- Module Name:    SawToothDivider - Behavioral 
+-- Project Name: 
+-- Target Devices: 
+-- Tool versions: 
+-- Description: 
 --
--- Notes: 
--- 1) This testbench template has been automatically generated using types
--- std_logic and std_logic_vector for the ports of the unit under test.
--- Xilinx recommends that these types always be used for the top-level
--- I/O of a design in order to guarantee that the testbench will bind
--- correctly to the timing (post-route) simulation model.
--- 2) To use this template as your testbench, change the filename to any
--- name of your choice with the extension .vhd, and use the "Source->Add"
--- menu in Project Navigator to import the testbench. Then
--- edit the user defined section below, adding code to generate the 
--- stimulus for your design.
+-- Dependencies: 
 --
-LIBRARY ieee;
-USE ieee.std_logic_1164.ALL;
-USE ieee.numeric_std.ALL;
-LIBRARY UNISIM;
-USE UNISIM.Vcomponents.ALL;
-ENTITY s6_s6_sch_tb IS
-END s6_s6_sch_tb;
-ARCHITECTURE behavioral OF s6_s6_sch_tb IS 
+-- Revision: 
+-- Revision 0.01 - File Created
+-- Additional Comments: 
+--
+----------------------------------------------------------------------------------
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.std_logic_arith.all;
 
-   COMPONENT s6
-   PORT( 	Clr	:	IN	STD_LOGIC; 
-          Clock	:	IN	STD_LOGIC; 
-          Wyjscie	:	OUT	STD_LOGIC_VECTOR (5 DOWNTO 0));
-   END COMPONENT;
+-- Uncomment the following library declaration if using
+-- arithmetic functions with Signed or Unsigned values
+--use IEEE.NUMERIC_STD.ALL;
 
-	--Wejscie
-   SIGNAL Clr	:	STD_LOGIC;
-   SIGNAL Clock	:	STD_LOGIC;
+-- Uncomment the following library declaration if instantiating
+-- any Xilinx primitives in this code.
+--library UNISIM;
+--use UNISIM.VComponents.all;
+
+entity SawToothDivider is
+    Port ( Clk : in  STD_LOGIC;
+           Clr : in  STD_LOGIC;
+			  
+           SawtoothOUT : out  STD_LOGIC_VECTOR(5 downto 0);
+           StartOUT : out  STD_LOGIC);
+end SawToothDivider;
+
+architecture Behavioral of SawToothDivider is
+	signal iteratorDzielnikaCzestotliwosci: integer := 1;
+	signal tempDzielnikaCzestotliwosci : STD_LOGIC := '0';
 	
-	--Wyjscie
-   SIGNAL Wyjscie	:	STD_LOGIC_VECTOR (5 DOWNTO 0);
+	--Wersja testowa do której mam dane, docelowo 16667
+	constant czestotliwoscSygnalu : natural := 25000;
 	
-	--Okres 50MHz
-	constant Clock_period : time := 20ns;
+	signal ClkDzielnikaCzestotliwosci : STD_LOGIC;
+	
+	signal iteratorGeneratoraPily : integer := 0;
+begin
 
-BEGIN
+-- Nasze podzielenie 50MHz do 1,5KHz
+-- period 16667
+DzielnikCzestotliwosci: process( Clk, Clr, tempDzielnikaCzestotliwosci )
+begin
+	if(Clr = '1') then 
+		iteratorDzielnikaCzestotliwosci <= 1;
+		tempDzielnikaCzestotliwosci <= '0';
+	elsif rising_edge(Clk)  then
+		iteratorDzielnikaCzestotliwosci <= iteratorDzielnikaCzestotliwosci + 1;
+		if (iteratorDzielnikaCzestotliwosci = czestotliwoscSygnalu) then
+			tempDzielnikaCzestotliwosci <= NOT tempDzielnikaCzestotliwosci;
+			iteratorDzielnikaCzestotliwosci <= 1;
+		end if;
+	end if;
+ClkDzielnikaCzestotliwosci <= tempDzielnikaCzestotliwosci;
+end process;
 
-   UUT: s6 PORT MAP(
-		Clr => Clr, 
-		Clock => Clock, 
-		Wyjscie => Wyjscie
-   );
+-- Pila
+GeneratorPily: process( ClkDzielnikaCzestotliwosci, Clr )
+begin
+	if(Clr = '1') then
+        iteratorGeneratoraPily <= 0;
+    elsif(rising_edge(ClkDzielnikaCzestotliwosci)) then
+        if(iteratorGeneratoraPily = 63) then
+            iteratorGeneratoraPily <= 0;
+        else
+            iteratorGeneratoraPily <= iteratorGeneratoraPily + 1;
+        end if;
+    end if;
+end process;
 
-	-- 50MHz
-	Clock_process :process
-	begin
-		Clock <= '0';
-		wait for Clock_period/2;
-		Clock <= '1';
-		wait for Clock_period/2;
-	end process;
-	 
-	-- Symulacja
-	Clr <= '0';
+SawtoothOUT <= conv_std_logic_vector(iteratorGeneratoraPily,6);
 
-END;
+end Behavioral;
+
