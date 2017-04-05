@@ -14,5 +14,6 @@ W folderach **docs** i **src** będą przechowywane kody programów oraz notatki
 
 + [x] Generacja Sygbału 1.5 kHz
 + [x] Wyciągnęcie zadawania sygnału spoza moduły podzilnika częstotliwości
-+ [ ] Obsługa klawiatury jako wyjścia
-+ [ ] Organy
++ [x] Obsługa klawiatury jako wyjścia
++ [x] Organy
++ [ ] Nagrywanie
