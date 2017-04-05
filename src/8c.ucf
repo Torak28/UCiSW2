@@ -1,0 +1,39 @@
+# soldered 50MHz Clock.
+NET "ClkIN" LOC = "C9" | IOSTANDARD = LVTTL;
+NET "ClkIN" PERIOD = 20.0ns HIGH 50%;
+
+#
+# Push-buttons (Press = Hi)
+#
+NET "ClrIN" LOC = "K17" | IOSTANDARD = LVTTL | PULLDOWN;
+#NET "A" LOC = "V4"  | IOSTANDARD = LVTTL | PULLDOWN;
+#NET "B"  LOC = "H13" | IOSTANDARD = LVTTL | PULLDOWN;
+#NET "C"  LOC = "D18" | IOSTANDARD = LVTTL | PULLDOWN;
+
+
+# ==== Common SPI signals ===================
+NET "SPI_MISO" LOC = "N10" | IOSTANDARD = LVCMOS33 ;
+NET "SPI_MOSI" LOC = "T4" | IOSTANDARD = LVCMOS33 | SLEW = SLOW | DRIVE = 6 ;
+NET "SPI_SCK" LOC = "U16" | IOSTANDARD = LVCMOS33 | SLEW = SLOW | DRIVE = 6 ;
+
+# ==== Digital-to-Analog Converter (DAC) ====
+# some connections shared with SPI Flash, DAC, ADC, and AMP
+NET "DAC_CLR" LOC = "P8" | IOSTANDARD = LVCMOS33 | SLEW = SLOW | DRIVE = 8 ;
+NET "DAC_CS" LOC = "N8" | IOSTANDARD = LVCMOS33 | SLEW = SLOW | DRIVE = 8 ;
+
+# ==== Other SPI devices ====================
+NET "SF_CE0" LOC = "D16" | IOSTANDARD = LVCMOS33 | DRIVE = 4 | SLEW = SLOW ;
+NET "SPI_SS_B" LOC = "U3" | IOSTANDARD = LVCMOS33 | SLEW = SLOW | DRIVE = 6 ;
+NET "FPGA_INIT_B" LOC = "T3" | IOSTANDARD = LVCMOS33 | SLEW = SLOW | DRIVE = 4 ;
+
+# ==== Analog-to-Digital Converter (ADC) ====
+# some connections shared with SPI Flash, DAC, ADC, and AMP
+NET "AD_CONV" LOC = "P11" | IOSTANDARD = LVCMOS33 | SLEW = SLOW | DRIVE = 6 ;
+
+# ==== Programmable Gain Amplifier (AMP) ====
+NET "AMP_CS" LOC = "N7" | IOSTANDARD = LVCMOS33 | SLEW = SLOW | DRIVE = 6 ;
+
+# PS/2 port
+#
+NET "PS2_Data" LOC = "G13" | IOSTANDARD = LVCMOS33 | SLEW = SLOW | DRIVE = 8;
+NET "PS2_Clk"  LOC = "G14" | IOSTANDARD = LVCMOS33 | SLEW = SLOW | DRIVE = 8;
