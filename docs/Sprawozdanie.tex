@@ -1,0 +1,411 @@
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[polish]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{enumitem}
+\usepackage{biblatex}
+\usepackage{graphicx}
+\usepackage[export]{adjustbox}
+\usepackage{listings}
+\usepackage{float}
+\selectlanguage{polish}
+
+
+\title{\textbf{Pianino wykonane na układzie z rodziny Spartan3E z możliwością zapisu i odczytu z pamięci RAM}}
+\author{Jan Kowalski, 111666\\Jarosław Ciołek-Żelechowski, 218386\\\\Prowadzący Projekt: dr inż. Jarosław Sugier}
+
+\begin{document}
+	
+	\maketitle
+	\pagenumbering{gobble}
+	\newpage
+	\pagenumbering{arabic}
+	\tableofcontents
+	\newpage
+	
+	\section{Wstęp}
+	\subsection{Cel i zakres projektu}
+	Założeniem projektu było wykonani konkretnej realizacji  z wykorzystaniem układu Spartan3E w celach dydaktycznych.  Jako grupa zdecydowaliśmy się na próbę implementacji jedno-gamowego piania obsługiwanego przez klawiaturę podłączaną do układu, z możliwością zapisywania i odtwarzania danego fragmentu na pamięci RAM urządzenia. Do odtwarzania naszej muzyki wykorzystaliśmy przetwornik DAC i podłączony do niego głośnik.\\\\Prace nad projektem podzieliliśmy na pomniejsze etapy, tj.:
+	\begin{itemize}[noitemsep]
+	\item Generacja sygnału 1,5 kHz,
+	\item Wyprowadzenie sygnału z modułu Podzielnika Częstotliwości,
+	\item Obsłużenie przetwornika DAC,
+	\item Obsługa klawiatury jako wejścia,
+	\item Implementacja pamięci RAM,
+	\item Odtwarzanie z pamięci,
+	\item Nagrywanie, odgrywanie.
+	\end{itemize}
+	Tym samym etapy Naszego projektu można traktować jako jego szczegółowy zakres i plan pracy w ujęci celu do którego dążymy. 
+	
+	\subsection{Opis Sprzętu}
+	W naszym projekcie korzystaliśmy z platformy sprzętowej zestawu „S3EStarter Kit” firmy Digilent, klawiatury komputerowej podłączonej do zestawu na porcie PS2 oraz z głośnika firmy Tonsil. Co do samego układu to jego dokładny opis oraz specyfikacja znajduję się w dokumentacji \cite{1}. Warto jedynie dodać że korzystamy z przetwornika cyfra/analog LTC2624 \cite{2}.
+	
+	
+	\subsection{Opis interfejsów i używanych protokołów}
+	Jak już zostało wspomniane powyżej do interakcji z Naszym układem wymagana jest klawiatura komputerowa z wtyczką PS2 oraz głośnik. Parametry klawiatury czy głośnika, jak i ich właściwości nie mają dla poprawnej pracy układu żadnego znaczenia. W przypadku klawiatury wynika to z standardu jakim jest PS2, a w przypadku głośnika, jest to standard przetwornika DAC. Tym samym nie ma potrzeba zamieszczania danych katalogowych opisywanych elementów.\\\\Obsługa przetwornika DAC odbywa się za pomocą magistrali SPI. Sama obsługa realizowana jest w oparciu o rozdział 9 dokumentacji \cite{1}
+
+	\section{Opis Projektu}
+	\subsection{Schemat główny}
+	
+\begin{figure}
+	\centering
+	\includegraphics[width=0.7\linewidth, height=0.98\textheight]{3}
+	\caption{Schemat całego układu z podziałem na sekcje}
+	\label{fig:1}
+\end{figure}
+	
+	
+	Nasz projekt można podzielić na trzy sekcje:
+	\begin{itemize}[noitemsep]
+		\item Obsługa wejścia/wyjścia,
+		\item Generowanie sygnału,
+		\item Operacje z wykorzystaniem pamięci RAM.
+	\end{itemize}
+
+	Sam przepływ informacji w naszym układzie rozpoczyna się w module PS2\_Kbd który zaczytuje z klawiatury znaki skaningowe, które następnie trafiają do modułu FreqButton, będącego maszyną stanów. Poszczególne stany oznaczają wciśnięty klawisz i w zależności od tego przesyłają do modułu RAM odpowiedni kod. Moduł RAM w zależności od wyjść modułu ChooseSrc oraz stanów Guzik1, Guzik2 i Guzik3 i danych otrzymanych wcześniej z modułu FreqButton wysyła odpowiednie informacje do SawToothDivider. Przez odpowiednie dane rozumiem częstotliwość potrzebną do uzyskania konkretnego sygnału. SawToothDivider zaś przesyła dalej odpowiednio przygotowany sygnał piłokształtny, który następnie poprzez działanie modulu DACWrite wygrywany jest na głośniku.\\\\Cały przepływ jest wykonywany zgodnie z schematem układu od lewej do prawej i można nawet stwierdzić że jest liniowy.
+		
+	\newpage
+		
+	\subsection{Hierarchia Projektu}
+	
+	\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.7\linewidth]{2}
+	\caption{Hierarchia Projektu}
+	\label{fig:2}
+	\end{figure}
+
+	Sama Hierarchia układu nie jest skomplikowana. Poszczególne moduły są opisane i „wrzucone” na schemat. Dużo więcej w zrozumieniu układu da przyswojenie opisanych powyżej sekcji, tj.
+	\begin{itemize}[noitemsep]
+		\item Obsługa wejścia/wyjścia,
+		\item Generowanie sygnału,
+		\item Opcjonalne operacje z wykorzystaniem pamięci RAM
+	\end{itemize}
+	
+	I tak sekcja czerwona z Rysunku 1, obsługuje wejście i wyjście z układu. Dla samego algorytmu postępowania nie ma żadnego znaczenia. Jest tylko i wyłącznie wejściem i wyjściem z układu. Sekcja Niebieska z Rysunku 1 jest generatorem zegara 100 Hz, tłumaczem stanu przycisków Guzik1, Guzik2, Guzik3, generatorem adresów w wielkiej, powtarzanej w kółko pętli oraz samym RAMem, który w oparciu o stan guzików i podany adres zapisuje, odczytuje lub zupełnie pomija pamięć. I w końcu sekcja zielona Rysunku 1, która to jest samym pianinem w sobie. To tutaj kod poszczególnego klawisza tłumaczony jest na 4-bitowy kod w oparciu o który układ generuje odpowiedni sygnał piłokształtny. To tutaj generowany jest dźwięk i to ta sekcja jest najważniejszym elementem projektu.
+	
+	\subsection{Opisy szczególowe modułów}
+	\subsubsection{Moduł PS2\_Kbd}
+	
+	Moduł pobrany ze strony Zespołu Systemów Komputerowych. W Naszym projekcie korzystamy z wyjścia DO(7:0), DO\_Rdy i F0. DO\_Rdy sygnalizuje odebranie klawisza, który potem trafia na wektor DO(7:0) jako kod skaningowy. Wyjście F0 oznacza kod zwolnienia klawisza i jest dla Nas sygnałem kończącym „przesyłanie” poszczególnego klawisza. \cite{3}
+		
+	\subsubsection{Moduł FreqButton}
+	
+	\begin{figure}[h]
+		\centering
+		\includegraphics[width=0.5\linewidth, height=0.4\textheight]{4}
+		\caption{Moduł FreqButton}
+		\label{fig:4}
+	\end{figure}
+	
+
+	Wejścia:
+	\begin{itemize}[noitemsep]
+	\item Clr - reset,
+	\item Clk – systemowy zegar,
+	\item K\_rdy – odebranie sygnału o odczytaniu klawisza z klawiatury na porcie PS2,
+	\item IN\_klaw – kod skaningowy klawisza odczytanego z klawiatury,
+	\item F0 – kod zwolnienia klawisza.
+	\end{itemize}
+	Wyjścia:
+	\begin{itemize}[noitemsep]
+		\item FreqOUT – wyjście, będące tłumaczeniem wciśniętego klawisza na konwencję używaną dalej.
+	\end{itemize}
+	
+	To Nasza wielka maszyna stanów. Początkowo czeka na zbocze rosnące na wejściu K\_rdy, jak je dostanie to zaczytuje kod skaningowy klawisza i wchodzi do odpowiedniego stanu. Obsługujemy jedną gamę, tj. 12 klawiszy: A, W, S, E, D, F, T, G, Y, H, U, J. Poszczególne nazwy stanów dla ułatwienia odpowiadają wciśniętym klawiszom. Gdy na wejściu pojawi się nie obsługiwany kod skaningowy tj. zostanie wciśnięty jakiś inny klawisz niż te wyżej wymienione, to nasza maszyna nie zmieni swojego stanu, pozostając w spoczynku. Znajdując się w poszczególnych stanach, czekamy aż na wejściu do modułu pojawi się sygnał F0, który to pozwoli nam wyjściu z np. stanu „A” do stanu spoczynku, u Nas oznaczonym jako stan „XD”. Cała opisana tutaj funkcjonalnośc wykonuje się w procesie StMch.\\\\W procesie OutrPr Nasza maszyna w zależności od stanu w którym się znajduje, konstruuje wektor wyjściowy FreqOUT. Przyjęliśmy konwencję w której wysokość dźwięku kodowana jest na 4 bitach, z czego reprezentacje 1-12 w systemie dwójowym oznaczają poszczególne wysokości dźwięku, a 0 oznacza ciszę.
+	
+	\subsubsection{Moduł ChooseSrc}
+	\begin{figure}[h]
+		\centering
+		\includegraphics[width=0.5\linewidth, height=0.4\textheight]{5}
+		\caption{Moduł ChooseSrc}
+		\label{fig:5}
+	\end{figure}
+	
+
+	Wejścia:
+	\begin{itemize}[noitemsep]
+	\item Clk – wejście zegara sytemowego,
+	\item Clr - reset,
+	\item WrtIN – Wejście Guzik1,
+	\item RdIN – Wejście Guzik2.
+	\end{itemize}
+	Wyjścia:
+	\begin{itemize}[noitemsep]
+	\item Address – 10 bitowe wyjście Adresowe,
+	\item WrtOUT – Wyjście oznaczające zapis do pamięci,
+	\item RdOUT – Wyjśie oznaczające czytanie z pamięci,
+	\item Enable – Zbocze Enable, „włączające” moduł RAM,
+	\item Clk100 – wyjście zegara 100 Hz.
+	\end{itemize}
+	
+	Moduł ChooseSrc jest modułem sterującym i sprawdzającym poprawność danych. W procesie CloclProc generuje zbocze zegarowe o częstotliwości 100 Hz, które potem w kolejnym procesie AdressProce jest wykorzystywane do cyklicznego zwiększania wektora Adresów. Sam wektor jest 10 bitowy co wynika z przyjętej przez Nas wielkości pamięci równej 1 kilobajtowi. Proces AdressProce inkrementuje o jeden wektor adresu a gdy dojdzie do ostatniego, to go po prostu przekręca. W momencie w którym na wejściu modułu pojawi się wysokie zbocze Clr, opisywany proces wyzeruje wektor Adresu, co sprawi że zaczniemy czytać pamięć od nowa, od samego początku. \\\\Ostatnim procesem w module ChooseSrc jest porces RdWrProc, który zaczytuje wejścia RdIN i WrtIN i przesyła je dalej na RdOUT i WrtOUT. Oprócz tego modół ten wysyła sygnał Enable, który w zamyśle miał sterować potrzebą korzystania z pamięci RAM. W tym momencie wyjśie Enable jest zawsze w stanie '1' przez cały czas pracy działania modułu ChooseSrc
+	
+	\subsubsection{Moduł RAM}
+
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.5\linewidth, height=0.5\textheight]{6}
+		\caption{Moduł RAM}
+		\label{fig:6}
+	\end{figure}
+	
+
+	Wejścia:
+	\begin{itemize}[noitemsep]
+	\item Clock – wejście zegara 100 Hz,
+	\item Clr – reset, obsługiwany za pomocą Guzik3,
+	\item WrtIN – wejście z modułu sterującego, tj. ChooseSrc,
+	\item RdIN – wejście z modułu sterującego, tj. ChooseSrc,
+	\item Enable – sygnał określający potrzebę korzystania z modułu,
+	\item Address – 10 bitowe wejście Adresowe,
+	\item DataIN – Odczytany kod klawisza zapisany w przyjętej konwencji.
+	\end{itemize}
+	Wyjścia:
+	\begin{itemize}[noitemsep]
+	\item DataOUT – 4 bitowy wektor określający wysokość dźwięku w zależności od wszystkich zmiennych w układzie.
+	\end{itemize}
+	
+	Jak już było opisywane wcześniej, moduł RAM zawiera w sobie implementacje tablicy pamięci o wielkości 1024 komórek z czego każda jest 4 bitowym wektorem. Całość obsługi pamięci została rozbita na dwa procesy, tj. Read i Write. I tak w Read zachowujemy się w zależności od zboczy na wejściu Clr i Enable. Dla zbocza wysokiego na Clr Nasz proces wyśle na wyjście DataOUT same zera. Dla Enable = ‘1’ Nasz proces sprawdzi stan wejścia RdIN. Jeśli jest ono wysokie to na wyjściu DataOUT pojawi się zawartość pamięci z komórek o adresie akurat podawanym przez wejście Address. Dla każdej innej sytuacji na wyjście DataOUT trafi wejście DataIN. Jest to oczywiście spowodowane tym że Nasz układ rozumie tylko stan czytania, zapisywania i bezczynności. Dla stanów zapisywania i bezczynności warto przesyłać na wyjście DataOUT, wejście DataIN. Dla bezczynności oznaczać to będzie przesyłanie ”ciszy”, a dla zapisywania da możliwość odsłuchania tego co się akurat zapisuje. Samo zapisywanie i czyszczenie pamięci jest wykonywane w drugim procesie, tj. Write. Tutaj podobnie jak w poprzednio w zależności od stanów wejść Enable i Clr podejmowane są kolejne kroki. Dla Clr jest to zerowanie, czyszczenie pamięci. A dla Enable jest to sprawdzanie stanu zbocza wejściowego WrtIN. Jeśli jest ono równe ‘1’ to do pamięci po adresem akurat podawanym przez wejście Address zapisywane jest wejście z DataIN. Należy pamiętać że te dwa procesy wykonywane są asynchronicznie. I tak dla wejście wysokiego Clr oznacza to że pamięć zostanie nie tylko wyzerowana, ale też zacznie się inkrementować od początku.
+	
+	\subsubsection{Moduł SawToothDivider}
+
+	\begin{figure}[h]
+		\centering
+		\includegraphics[width=0.5\linewidth, height=0.3\textheight]{7}
+		\caption{Moduł SawToothDivider}
+		\label{fig:7}
+	\end{figure}
+	
+	\newpage
+	
+
+	Wejścia:
+	\begin{itemize}[noitemsep]
+	\item Clk – wejście zegara systemowego,
+	\item Clr - reset,
+	\item FreqIN – wejście kodu oznaczające częstotliwość dźwięku.
+	\end{itemize}
+	Wyjścia:
+	\begin{itemize}[noitemsep]
+	\item AddrOUT – wyjście addresowe,
+	\item CmdOUT – wyjście rozkazu,
+	\item StartOUT – wyjście Start,
+	\item SawtoothOUT – wektor sygnału piłokształtnego.
+	\end{itemize}
+
+	Można powiedzieć że dla generacji dźwięku jest to najważniejszy moduł ze wszystkich. I tak w procesie SetFreq w zależności od otrzymanego na wejściu FreqIN kodu, który oznacza wciśnięcie konkretnego klawisza lub odegranie dźwięku który znajduję się pod konkretnym klawiszem, ustawia sygnał wewnętrzy Freq na konkretną wartość oznaczającą częstotliwość konkretnego dźwięku, zgodną z oktawą 5 na Pianie. \cite{4} \\\\Następnie w oparciu o ustaloną częstotliwość, oraz o 50 MHz zegarowy sygnał wejściowy tworzony jest kolejny sygnał zegarowy  o częstotliwości zgodnej z ustaloną. Dodatkowo w tym samym procesie, tj. FreqDiv opisywany jest sygnał StartOUT, którego obecność wynika z modułu DACWrite. Zadaniem wyjścia StartOUT jest jednotaktowy dla zegara systemowego sygnał za każdym razem jak zegar o częstotliwości zadanej na wejściu FreqIN zmieni swój stan. Dalej w ostatnim procesie SawToothGen tworzony jest sygnał piłokształtny zgodny z sygnałem zegarowym z poprzedniego procesu. Sygnał piłokształtny generowany jest na zasadzie inkrementowanego wektora, który po 64 okresie się resetuje z powrotem. W ostatniej części tego modułu jest wysyłanie sygnałów wyjściowych CmdOUT i AddrOUT. Sygnały te są potrzebne dla modułu DACWrite. Tutaj także wysyłany jest sygnał SawToothOUT będący sygnały piłokształtnym z poprzedniego procesu po operacji konkatenacji z sześcioma zerami umieszczonym na najmniej ważnych pozycjach. Operacja konkatenacji wynika ponownie z potrzeby dostarczenia tego typu sygnału do modułu DACWrite.
+	
+	\subsubsection{Moduł DACWrite}
+	Moduł pobrany ze strony Zespołu Systemów Komputerowych. Odpowiedzialny za komunikacje z przetwornikiem cyfra/analog LTC264 w naszym układzie. W zależności od stanu wejścia Start dane z wejść Cmd, Addr i DATA są zatrzaskiwane i przesyłane szeregowo. Dla Nas wejścia Cmd i Addr są stałe i wynoszą kolejno 3 i 2 zapisane oczywiście w postaci dwójkowej na wektorze 4 bitowym. Addr oznacza adres na który wysyłamy Naszą „melodie”, a cmd jest komendą w Naszym przypadku mówiącą „graj”. \cite{4}
+	
+	\subsection{Maszyna Stanów - opis}
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.4\linewidth, height=0.2\textheight]{9}
+		\caption{Maszyna Stanów}
+		\label{fig:7}
+	\end{figure}
+	
+	
+	Zamieszczam poglądowy rysunek Maszyny Stanów. Oddający dość dobrze ideę tej zastosowanej w układzie w module FreqButton. Maszyna rozpoczyna pracę od stanu spoczynku i czeka w nim na sygnał wejściowy K\_rdy, gdy jest On równy ‘1’ to sprawdza kod skaningowy kalwisza, i jeśli jest on przez nią rozpoznany to wchodzi do konkretnego stanu. Dla przykładu jeśli odczytamy kod ‘1C’ oznaczający literę ‘A’ to nasza maszyna wejdzie do stanu ‘A’. Będąc w stanie ‘A’ czekamy na wejście F0 oznaczające zwolnienie klawisza. Dla Naszej Maszyny stanów oznacza to że przechodzimy ze stanu A do stanu Spoczynku.\\\\Zastosowanie maszyny stanów, nawet tak prostej, było w Naszym projekcie znaczącym ułatwieniem. Dzięki jej zastosowaniu w bardzo łatwy sposób obsługujemy aktualnie wciśnięty klawisz. Nie musimy się np. martwić długością jego wciśnięcia. Załatwia to za Nas przejście  z stanu Spoczynku do konkretnego stanu np. ‘A’ i wyjście z powrotem w momencie puszczenia klawisza.
+	
+	\subsection{Wyniki symulacji}
+	
+	Poniżej przedstawie symulacje wszystkich modułów oprócz PS2\_Kbd, DACWrite i FreqButton. PS2\_Kbd i DACWrite pomijam jako że są to moduły pobrane ze stony.\cite{4}\\\\Freq Button pomijam, jako że jego zadaniem jest tylko i wyłączenie tłumaczenia wejśc na wyjście w oparciu o maszynę staów. Co jest procesem relatywnie prostym i wielokrotnie przez Nas analizowanym, na chociażby kursie poprzedzającym ten projekt.
+	
+	\subsubsection{Moduł ChooseSrc}
+	
+	\begin{lstlisting}[frame=single, caption={Test modułu ChooseSrc},captionpos=b]
+RdIN <= '0', '1' after 500 ns, '0' after 1000 ns;
+WrtIN <= '0', '0' after 500 ns, '1' after 1000 ns;
+	\end{lstlisting}
+	
+	Jak widać test modułu ChooseSrc jest dziecinnie prosty. Ot na wejście trafiają pewne sygnały które następnie należy przekazać dalej w niezmienionej formie.
+	
+	\begin{figure}[h]
+		\centering
+		\centerline{\includegraphics[width=1.6\linewidth, height=0.3\textheight]{11}}
+		\caption{Symulacja modułu ChooseSrc}
+		\label{fig:11}
+	\end{figure}
+	
+	
+	No i dokładnie jest tak jak być powinno.
+	
+	\newpage
+	
+	\subsubsection{Moduł RAM}
+	
+	\begin{lstlisting}[frame=single, caption={Test modułu RAM},captionpos=b]
+Enable <= '0', '1' after 400 ns;
+RdIN <= '0', '1' after 400 ns, '0' after 900 ns,
+'1' after 1600 ns, '0' after 2000 ns;
+Clr <= '0' after 200 ns, '1' after 600 ns,
+'0' after 800 ns;
+WrtIN <= '0', '1' after 900 ns, '0' after 1600 ns;
+	
+-- Zapis
+stim_write : process
+begin		
+	wait for 900 ns;	
+	for i in 0 to 1023 loop
+		DataIn  <= DataIn + 3;
+		wait for 40 ns;
+	end loop;
+	wait;
+end process;
+	
+-- Odczyt
+stim_read : process
+begin		
+	wait for 400 ns;	
+	loop
+		Address <= Address - 1;
+		wait for 20 ns;
+	end loop;
+	wait;
+end process;
+	\end{lstlisting}
+	Podany powyżej kod w założeniu ma przez 400 ns trzymać pamięć RAM w stanie bezczynności z stanem niskim na wejściu Enable. Oznacza to że moduł powinien być wyłączony i nie reagować.
+	
+	\begin{figure}[H]
+		\centering
+		\centerline{\includegraphics[width=1.6\linewidth, height=0.35\textheight]{12}}
+		\caption{Symulacja modułu RAM}
+		\label{fig:11}
+	\end{figure}
+	
+	Dalej powinno dojść do podniesienia się wejść Enable i RdIN, co oznacza rozpoczęcie odczytu. Pamięć RAM została uprzednio zapełniona przez ze mnie w samym kodzie modułu RAM.
+	
+	\begin{lstlisting}[frame=single, caption={Implementacja RAM},captionpos=b]
+type Memory_Array is array ( 1023 downto 0 )
+of STD_LOGIC_VECTOR (3 downto 0);
+	
+signal Memory : Memory_Array :=(X"1", X"2",
+X"3", X"4", X"5", X"6", X"7", X"8", X"9",
+X"A", X"B", X"C", X"D", X"E", X"F",
+others => X"6");
+	\end{lstlisting}
+	
+	\begin{figure}[H]
+		\centering
+		\centerline{\includegraphics[width=1.6\linewidth, height=0.35\textheight]{13}}
+		\caption{Symulacja modułu RAM}
+		\label{fig:11}
+	\end{figure}
+	
+	Jak widać pamięć RAM zgodnie z założeniem przesyła na wyjściu DataOUT zapisaną pamięć, w dobrej kolejności i o dobrych wartościach.\\\\Dalej po 900 ns linia RdIN zmienia stan na niski, a podnosi się Linia WrtIN. Oznacza to że rozpoczyna się zapis do pamięci. Zgodnie ze specyfikacją na wyjściu DataOUT powinno się pojawić dokładnie to samo co na wejściu DataIN.
+	
+	\begin{figure}[H]
+		\centering
+		\centerline{\includegraphics[width=1.6\linewidth, height=0.35\textheight]{14}}
+		\caption{Symulacja modułu RAM}
+		\label{fig:11}
+	\end{figure}
+	
+	Jak widać DataOUT jest dokładnie taka sama jak DataIN.\\\\Ostatnim elementem testu było sprawdzenie czy to co zapisaliśmy można odczytać. Zgodnie więc z powyższym screenem zapisujemy „0011” i „0110” na kolejno „1110100101” i „11101000011”. 
+	
+	\begin{figure}[H]
+		\centering
+		\centerline{\includegraphics[width=1.6\linewidth, height=0.35\textheight]{15}}
+		\caption{Symulacja modułu RAM}
+		\label{fig:11}
+	\end{figure}
+	
+	Jak widać odpowiednie komórki są na odpowiednich miejscach!
+	
+	\subsubsection{Moduł SawToothDivider}
+	
+	\begin{lstlisting}[frame=single, caption={Test modułu SawToothDivider},captionpos=b]
+Clock_process :process
+begin
+	ClkIN <= '0';
+	wait for Clock_period/2;
+	ClkIN <= '1';
+	wait for Clock_period/2;
+end process;
+	
+-- Symulacja
+ClrIN <= '0';
+	\end{lstlisting}
+	
+	Jak widać sam proces symulacji nie jest zupełnie skomplikowany, jako że jego najważniejsza część, czyli przesyłana częstotliwość ustawiana jest przez poprzedni moduł. W tym wypadku będzie to stan A.
+	
+	\begin{figure}[H]
+		\centering
+		\centerline{\includegraphics[width=1.6\linewidth, height=0.35\textheight]{16}}
+		\caption{Symulacja modułu SawToothDivider}
+		\label{fig:11}
+	\end{figure}
+	
+	Jak widać przy zmienie wartości piły generowany jest jednotaktowy sygnał StartOUT, do tego ładnie też widać że wartości CmdOUT i AddOUT są stałe.
+	
+	\section{Implementacja}
+	\subsection{Podsumowanie Generowania Pliku Programowego}
+	
+	\begin{figure}[H]
+		\centering
+		\centerline{\includegraphics[width=1.6\linewidth, height=0.55\textheight]{17}}
+		\caption{Podsumowanie}
+		\label{fig:11}
+	\end{figure}
+	
+	Jak widać w posumowaniu z 9312 przerzutników Nasz projekt wykorzystuje 4294, czyli 46\%. Do tego należałoby dodać że spełniliśmy wszystkie założenia czasowe, z najgorszą ścieżką równą 10.967 ns
+	
+	\subsection{Zależności czasowe Projektu}
+	
+	\begin{figure}[H]
+		\centering
+		\centerline{\includegraphics[width=1.2\linewidth, height=0.1\textheight]{18}}
+		\caption{Podsumowanie - czas}
+		\label{fig:11}
+	\end{figure}
+	
+	Tym samym mieścimy się w jedny cyklu 50 MHz zegara, czyli w 20 ns. Niestety na szybszy procesor, np. 100 MHz nasz układ w jego konkretnym stanie się już nie nadaje. Potrzebne by były pewne udoskonalenia pod kątem optymalizacji.\\\\Warto też dodać że na Naszą pamięć RAM zarezerwowano 4096 bitowy rejestr.
+	
+	\begin{figure}[H]
+		\centering
+		\centerline{\includegraphics[width=1.2\linewidth, height=0.1\textheight]{19}}
+		\caption{Podsumowanie - pamięć}
+		\label{fig:11}
+	\end{figure}
+	
+	\subsection{Podręcznik użytkowania}
+	
+	\begin{figure}[H]
+		\centering
+		\centerline{\includegraphics[width=1.2\linewidth, height=0.6\textheight]{22}}
+		\caption{Płytka}
+		\label{fig:11}
+	\end{figure}
+	
+	Do obsługi Naszego projektu potrzebna jest klawiatura podpięta do portu PS2 oznaczanego na poglądowym zdjęciu  kolorem żółtym/pomarańczowym oraz głośnik podpięty w miejscu zaznaczonym na zdjęciu na fioletowo na portach GND i DAC\_C.\\\\Do grania poszczególnych dźwięków posłużymy się klawiszami A, W, S, E, D, F, T, G, Y, H, U, J. Dodatkowo na przełącznikach zaznaczonych na niebiesko, zielono i czerwono została, zostały wyprowadzone funkcjonalności odpowiedzialne za czyszczenie pamięci urządzenia, odgrywanie zawartości pamięci i nagrywanie do pamięci.\\\\I tak gdy chcemy coś nagrać przesuwamy czerwony przełącznik do góry, gramy naszą melodię, po czym przesuwamy go w dół. Dalej by ją odsłuchać przesuwamy zielony przełącznik w górę. A gdy będziemy chcieli nagrać coś jeszcze raz lub po prostu wyczyścić pamięć to przesuwamy ostatni, niebieski przełącznik
+	
+	\section{Podsumowanie}
+	\subsection{Krytyczna Ocena Projektu}
+	Udało się nam spełnić założenia projektowe jakie sobie postawiliśmy na początku prac nad projektem. Dość szybko osiągnęliśmy sprawny moduł piania, dużo jednak czasu zabrało nam stworzenie pamięci RAM. \\\\Co do samego prowadzenia projektu to przyznam że jestem bardzo pozytywnie zaskoczony rezultatem. Z tygodnia na tydzień widać było postęp i nawet jeśli nie osiągaliśmy wyznaczonych rezultatów, to udawało się nam zbadać błędne ścieżki i zrozumieć Nasz błąd. Bardzo zadowoleni jesteśmy z faktu że dużo częściej stawaliśmy w obliczu paru pomysłów na dojście do celu, niż sytuacji w których nie mieliśmy żadnego pojęcia co począć. Dodatkowo sam projekt jako taki dawał bardzo wyraźne etapy i pozwalał dość dokładnie określić gdzie się znajdujemy, jaki jest Nasz postęp
+	\subsection{Samokrytyka}
+	Co do rzeczy nieudanych to na pewno należy wspomnieć o ok.50 błędach jakie pojawiają się przy kompilacji. Na pewno można by było część z nich usunąć. Co do samej funkcjonalności Naszego projektu to na pewno fakt że zapis, odczyt z RAMu obsługiwany jest z poziomu przełączników na płytce nie jest do końca ładnym rozwiązaniem. Tego  typu interakcja powinna odbywać się z poziomu klawiatury, co byłoby dużo bardziej naturalne. Co więcej sam sposób operowania na pamięci przez Nas jest bardzo nieefektywny. Moglibyśmy w jakiś sposób mierzyć czas trzymania klawisza i zapisywać go w pamięci zamiast tak jak teraz zapełniać RAM kodem tego samego przycisku. \\\\Co Nas powstrzymało od implementacji tego w tym momencie? W dużej mierze brak czasu, ale też fakt że w ujęciu dwutygodniowym tego typu projekt jest projektem „z doskoku”. Rozumiemy przez to że gdy kończą się zajęcia, gdy ustalimy sobie co chcemy zrobić w domu na następne zajęcia, to nawet gdy to zrobimy od razu, to na następne zajęcia dwa tygodnie później, musimy też przeznaczyć część czasu na ponownie zapoznanie się z całym projektem, na przypomnienie sobie wszystkiego. Łatwo to było zauważyć gdy w pierwszej części semestru przychodziliśmy co tydzień i Nasz postęp rósł z każdą wizytą, a My sami nie traciliśmy czasu na „przypominanie” sobie.
+	\subsection{Kierunki rozwoju}	
+	Co do możliwych dróg rozwoju tego co osiągnęliśmy to wydaje się Nam że jesteśmy w miejscu z którego pójść można na wiele stron. Od prób modulowania kształtów sygnałów, poprzez nakładanie melodii i tworzenie czegoś polifonicznego poprzez stworzenia czegoś w stylu samplera umożliwiającego nagrywanie różnych ścieżek a potem ich odtwarzanie. Dla Nas ta ostatnia opcja wydaję się najciekawsza, ale to nasze osobiste zdanie.
+	\newpage
+	
+	\begin{thebibliography}{9}		
+		\bibitem{1} 
+		Spartan-3E FPGA Starter Kit Board User Guide,
+		\\\texttt{https://www.xilinx.com/support/documentation/boards\_and\_kits/ug230.pdf}
+		\bibitem{2} 
+		LTC2624 Manual,
+		\\\texttt{http://cds.linear.com/docs/en/datasheet/2604fd.pdf}
+		\bibitem{3} 
+		Moduł PS2\_Kbd, DACWrite,
+		\\\texttt{http://www.zsk.ict.pwr.wroc.pl/zsk\_ftp/fpga}
+		\bibitem{4} 
+		Tablica częstotliwości Nut,
+		\\\texttt{http://www.liutaiomottola.com/formulae/freqtab.htm}
+	\end{thebibliography}
+	
+\end{document}
